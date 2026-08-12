@@ -1,0 +1,2 @@
+# No packages to install. The core harness intentionally uses only Python's
+# standard library so a clean clone runs without dependency setup.
