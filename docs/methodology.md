@@ -26,18 +26,21 @@ size. A result of 0.90 on 9 flagged items has more sampling uncertainty than
 the held-out lower bound to clear the precision floor, rather than allowing a
 point estimate to pass on optimism alone.
 
-## The intentional failing gate
+## Baseline vs harness hill-climb
 
-The synthetic backend deliberately inflates confidence on one otherwise clean
-refactor that contains a `TODO` comment (`pr-014`, held out in test). On the
-committed fixture, development calibration selects threshold `0.23` with
-dev precision `1.00` and recall `1.00`. On untouched test data, precision is
-`0.857` with recall `1.00`, but the 95% bootstrap interval is `[0.5, 1.0]`.
-The lower bound fails the `0.80` gate, so `gate_pass` is `false`.
+**Baseline** (`python run_eval.py --baseline`): one pass per diff. The synthetic
+backend deliberately inflates confidence on a clean refactor that contains a
+`TODO` comment (`pr-014`). That false positive shows up on held-out data and
+widens the precision CI so a point estimate can look fine while the gate fails.
 
-That is the measurement lesson: calibrate on dev, report on untouched test,
-and do not ship on a point estimate alone. Re-run with `python run_eval.py`
-to regenerate `runs/latest_manifest.json`.
+**Harness** (default): five passes on shuffled diff line order, majority vote
+(`VOTE_MIN` of `N_PASSES`), then an FP validator that multiplies confidence by
+`TODO_FP_PENALTY` when the only scary signal is a TODO comment. Real bug markers
+are left alone. This is the interviewable "I changed the harness and measured
+it" step - same gold, same gate, different review pipeline.
+
+Re-run both commands and compare `runs/latest_manifest.json` fields under
+`pipeline`, `test.metrics`, and `test.precision_ci`.
 
 ## Selection bias
 
@@ -51,9 +54,3 @@ Binary precision, recall, F1, and the confusion matrix answer the ship/no-ship
 question. Quadratic weighted kappa, MAE, and Spearman retain ordinal detail
 (confusing a 4 with a 5 is different from confusing a 4 with a 1). A second
 annotator score lets agreement be measured separately from judge quality.
-
-## Out of scope for v1
-
-Multi-pass voting and a second-stage false-positive validator are natural next
-harness experiments (the kind of hill-climb a production review agent would
-run). They are intentionally deferred so the measurement spine stays clear.

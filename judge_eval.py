@@ -24,14 +24,26 @@ from gold_master import quadratic_weighted_kappa
 
 
 class JudgeBackend(Protocol):
-    def predict(self, title: str, diff: str, gold_score: int) -> tuple[int, float]: ...
+    def predict(
+        self,
+        title: str,
+        diff: str,
+        gold_score: int,
+        pass_index: int = 0,
+    ) -> tuple[int, float]: ...
 
 
 class SyntheticJudge:
     """Deterministic stand-in with realistic score noise and confidence noise."""
 
-    def predict(self, title: str, diff: str, gold_score: int) -> tuple[int, float]:
-        marker = sum(ord(char) for char in title + diff) % 17
+    def predict(
+        self,
+        title: str,
+        diff: str,
+        gold_score: int,
+        pass_index: int = 0,
+    ) -> tuple[int, float]:
+        marker = (sum(ord(char) for char in title + diff) + pass_index * 3) % 17
         noise = (marker % 5) - 2
         predicted_score = max(1, min(5, gold_score + noise // 2))
         has_bug = gold_score < BUG_CUT
